@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rendering/Image.h>
+#include <color/Image.h>
 #include <rendering/RenderScene.h>
 
 namespace rendering {

@@ -6,7 +6,7 @@
 namespace modelling {
 
 struct Reflection {
-  double prob;
+  color::Intensity prob;
   geometry::Normal3D dir;
   color::SColor color;
 };

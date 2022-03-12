@@ -14,7 +14,11 @@ struct ImageSize {
 
 using ImageData = std::vector<color::RGB>;
 
-void saveImage(std::string filename, ImageData const& data,
-               ImageSize const& size);
+struct Image {
+  ImageSize size;
+  ImageData data;
+};
+
+void saveImage(std::string filename, Image const& image);
 
 }  // namespace rendering

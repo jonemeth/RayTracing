@@ -34,9 +34,9 @@ struct RGB {
       this->b += b * intensities[i] * dl;
       prevLambda = lambdas[i];
     }
-    this->r = std::max(0.0, std::min(1.0, this->r));
-    this->g = std::max(0.0, std::min(1.0, this->g));
-    this->b = std::max(0.0, std::min(1.0, this->b));
+    this->r = std::max(color::Intensity(0.0), std::min(color::Intensity(1.0), this->r));
+    this->g = std::max(color::Intensity(0.0), std::min(color::Intensity(1.0), this->g));
+    this->b = std::max(color::Intensity(0.0), std::min(color::Intensity(1.0), this->b));
   }
 
   Intensity r, g, b;

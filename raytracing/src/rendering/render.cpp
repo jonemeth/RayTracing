@@ -2,8 +2,8 @@
 
 namespace rendering {
 
-#define MAXDEPTH (16)
-#define NUMSAMPLES (100)
+#define MAXDEPTH (32)
+#define NUMSAMPLES (20)
 
 struct Intersection {
   std::shared_ptr<modelling::Primitive> primitive;
@@ -99,7 +99,7 @@ color::SColor traceGlobal2(RenderScene const& renderScene, geometry::Ray ray,
   return c + ac / static_cast<color::Intensity>(reflections.size());
 }*/
 
-color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray,
+/*color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray,
                           size_t d) {
   if (d > MAXDEPTH) return color::SColor(0);
 
@@ -123,6 +123,36 @@ color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray,
     if (w.luminance() > 1e-2) {
       c += traceGlobal(renderScene, {x, reflection.dir}, d + 1) * w;
     }
+  }
+
+  return c;
+}*/
+
+color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
+  color::SColor c(0);
+  color::SColor w(1);
+
+  for (size_t i = 0; i < MAXDEPTH; ++i) {
+    auto [primitive, t] = intersect(renderScene, ray);
+
+    if (!primitive) break;
+    geometry::Point3D x = ray.start + t * ray.direction;
+    geometry::Normal3D normal = primitive->normal(x);
+    c += w *
+         directLightSource(renderScene, primitive, x, normal, -ray.direction);
+
+    modelling::Reflection reflection =
+        primitive->reflection(normal, -ray.direction);
+
+    if (reflection.prob < 1e-2) break;
+
+    geometry::Coord cost = reflection.dir * normal;
+    if (cost < 0) cost = -cost;
+    if (cost < 1e-2) break;
+
+    w *= reflection.color * cost * reflection.prob;
+    if (w.luminance() < 1e-2) break;
+    ray = {x, reflection.dir};
   }
 
   return c;
@@ -161,7 +191,7 @@ ImageData render(RenderScene const& renderScene, ImageSize imageSize) {
   for (auto const& raySamples : allRaySamples) {
     color::SColor c(0);
 
-    for (auto const& ray : raySamples) c += traceGlobal(renderScene, ray, 0);
+    for (auto const& ray : raySamples) c += traceGlobal(renderScene, ray);
 
     c /= static_cast<color::Intensity>(nSamples);
 
