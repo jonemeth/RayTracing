@@ -3,7 +3,6 @@
 namespace rendering {
 
 #define MAXDEPTH (32)
-#define NUMSAMPLES (20)
 
 struct Intersection {
   std::shared_ptr<modelling::Primitive> primitive;
@@ -152,19 +151,15 @@ color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
 
     w *= reflection.color * cost * reflection.prob;
     if (w.luminance() < 1e-2) break;
-    ray = {x, reflection.dir};
+    ray = geometry::Ray{x, reflection.dir};
   }
 
   return c;
 }
 
-ImageData render(RenderScene const& renderScene, ImageSize imageSize) {
-  static size_t nSamples = NUMSAMPLES;
-  static std::random_device rd;
-  static std::mt19937 gen(rd());
-  static std::uniform_real_distribution<geometry::Coord> dist(-0.5, 0.5);
-
-  ImageData imageData;
+color::ImageData render(RenderScene const& renderScene, color::ImageSize imageSize,
+                 size_t gridSize) {
+  color::ImageData imageData;
   imageData.reserve(imageSize.height * imageSize.width);
 
   using RaySamples = std::vector<geometry::Ray>;
@@ -173,17 +168,23 @@ ImageData render(RenderScene const& renderScene, ImageSize imageSize) {
 
   for (size_t i = 0; i < imageSize.height; ++i) {
     for (size_t j = 0; j < imageSize.width; ++j) {
-      for (size_t s = 0; s < nSamples; ++s) {
-        geometry::Coord ii = static_cast<geometry::Coord>(i) + dist(gen);
-        geometry::Coord jj = static_cast<geometry::Coord>(j) + dist(gen);
+      for (size_t u = 0; u < gridSize; ++u) {
+        for (size_t v = 0; v < gridSize; ++v) {
+          geometry::Coord ii = static_cast<geometry::Coord>(i) +
+                               (0.5 + static_cast<geometry::Coord>(u)) /
+                                   static_cast<geometry::Coord>(gridSize);
+          geometry::Coord jj = static_cast<geometry::Coord>(j) +
+                               (0.5 + static_cast<geometry::Coord>(v)) /
+                                   static_cast<geometry::Coord>(gridSize);
 
-        geometry::Coord y =
-            -(2 * ii / static_cast<geometry::Coord>(imageSize.height - 1) - 1);
-        geometry::Coord x =
-            2 * jj / static_cast<geometry::Coord>(imageSize.width - 1) - 1;
+          geometry::Coord y = -(
+              2 * ii / static_cast<geometry::Coord>(imageSize.height - 1) - 1);
+          geometry::Coord x =
+              2 * jj / static_cast<geometry::Coord>(imageSize.width - 1) - 1;
 
-        allRaySamples[i * imageSize.width + j].push_back(
-            renderScene.camera.getRay(x, y));
+          allRaySamples[i * imageSize.width + j].push_back(
+              renderScene.camera.getRay(x, y));
+        }
       }
     }
   }
@@ -193,7 +194,7 @@ ImageData render(RenderScene const& renderScene, ImageSize imageSize) {
 
     for (auto const& ray : raySamples) c += traceGlobal(renderScene, ray);
 
-    c /= static_cast<color::Intensity>(nSamples);
+    c /= static_cast<color::Intensity>(gridSize * gridSize);
 
     imageData.emplace_back(color::RGB(c));
   }

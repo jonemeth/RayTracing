@@ -13,6 +13,11 @@ void ColorMatch(Lambda lambda, Intensity &r, Intensity &g,
                 Intensity &b);
 
 struct RGB {
+  RGB(Intensity r0, Intensity g0, Intensity b0) {
+    r = r0;
+    g = g0;
+    b = b0;
+  }
 
   template <size_t nLambdas>
   RGB(Spectrum<nLambdas> const &spectrum) {

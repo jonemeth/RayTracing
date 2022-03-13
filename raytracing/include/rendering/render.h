@@ -5,6 +5,6 @@
 
 namespace rendering {
 
-ImageData render(RenderScene const& renderScene, ImageSize imageSize);
+color::ImageData render(RenderScene const& renderScene, color::ImageSize imageSize, size_t gridSize=4);
 
 }  // namespace rendering

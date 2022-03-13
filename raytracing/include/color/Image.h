@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace rendering {
+namespace color {
 
 struct ImageSize {
   size_t width;
@@ -20,5 +20,6 @@ struct Image {
 };
 
 void saveImage(std::string filename, Image const& image);
+Image loadImage(std::string filename);
 
-}  // namespace rendering
+}  // namespace color
