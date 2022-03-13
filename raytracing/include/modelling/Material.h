@@ -2,6 +2,9 @@
 
 #include <color/Spectrum.h>
 #include <geometry/Point3D.h>
+#include <modelling/Texture.h>
+
+#include <memory>
 
 namespace modelling {
 
@@ -11,38 +14,41 @@ struct Reflection {
   color::SColor color;
 };
 
-using Reflections = std::vector<Reflection>;
-
 class Material {
  public:
   virtual ~Material();
 
   virtual color::SColor BRDF(geometry::Normal3D const& L,
                              geometry::Normal3D const& N,
-                             geometry::Normal3D const& V) const = 0;
+                             geometry::Normal3D const& V,
+                             geometry::Point2D const& uv) const = 0;
 
   virtual Reflection reflection(geometry::Normal3D const& N,
-                                geometry::Normal3D const& V) const = 0;
-  virtual Reflections reflections(geometry::Normal3D const& N,
-                                geometry::Normal3D const& V, size_t n) const;
+                                geometry::Normal3D const& V, geometry::Point2D const& uv) const = 0;
 
   virtual color::SColor transparency() const;
+
+  virtual bool requiresUV() const;
 };
 
 class DiffuseMaterial : virtual public Material {
  public:
-  DiffuseMaterial(color::SColor spectrum);
+  DiffuseMaterial(color::SColor spectrum,
+                  std::shared_ptr<modelling::Texture> texture = nullptr);
 
   color::SColor BRDF(geometry::Normal3D const&, geometry::Normal3D const&,
-                     geometry::Normal3D const&) const override;
+                     geometry::Normal3D const&, geometry::Point2D const& uv) const override;
 
   color::Intensity averageAlbedo() const;
 
   Reflection reflection(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V) const override;
+                        geometry::Normal3D const& V, geometry::Point2D const& uv) const override;
+
+  bool requiresUV() const override;
 
  protected:
   color::SColor m_spectrum;
+  std::shared_ptr<modelling::Texture> m_texture;
 };
 
 class SpecularMaterial : virtual public Material {
@@ -50,12 +56,12 @@ class SpecularMaterial : virtual public Material {
   SpecularMaterial(color::SColor spectrum, color::Intensity shine);
 
   color::SColor BRDF(geometry::Normal3D const& L, geometry::Normal3D const& N,
-                     geometry::Normal3D const& V) const override;
+                     geometry::Normal3D const& V, geometry::Point2D const& uv) const override;
 
   color::Intensity averageAlbedo() const;
 
   Reflection reflection(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V) const override;
+                        geometry::Normal3D const& V, geometry::Point2D const& uv) const override;
 
  protected:
   color::SColor m_spectrum;
@@ -70,13 +76,10 @@ class IdealReflector : virtual public Material {
   color::SColor const& kr() const;
 
   color::SColor BRDF(geometry::Normal3D const&, geometry::Normal3D const&,
-                     geometry::Normal3D const&) const override;
+                     geometry::Normal3D const&, geometry::Point2D const& uv) const override;
 
   Reflection reflection(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V) const override;
-
-  Reflections reflections(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V, size_t n) const override;
+                        geometry::Normal3D const& V, geometry::Point2D const& uv) const override;
 
  private:
   color::SColor m_Kr;
@@ -90,13 +93,10 @@ class IdealRefractor : virtual public Material {
   color::SColor const& kt() const;
 
   color::SColor BRDF(geometry::Normal3D const&, geometry::Normal3D const&,
-                     geometry::Normal3D const&) const override;
+                     geometry::Normal3D const&, geometry::Point2D const& uv) const override;
 
   Reflection reflection(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V) const override;
-
-  Reflections reflections(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V, size_t n) const override;
+                        geometry::Normal3D const& V, geometry::Point2D const& uv) const override;
 
   color::SColor transparency() const override;
 
@@ -112,17 +112,16 @@ class GeneralMaterial : public DiffuseMaterial,
  public:
   GeneralMaterial(color::SColor diffuseColor, color::SColor specularColor,
                   color::Intensity shine, color::SColor kr, color::SColor kt,
-                  color::Intensity N);
+                  color::Intensity N, std::shared_ptr<Texture> texture=nullptr);
 
   color::SColor BRDF(geometry::Normal3D const& L, geometry::Normal3D const& N,
-                     geometry::Normal3D const& V) const override;
+                     geometry::Normal3D const& V, geometry::Point2D const& uv) const override;
 
   Reflection reflection(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V) const override;
+                        geometry::Normal3D const& V, geometry::Point2D const& uv) const override;
 
-  Reflections reflections(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V, size_t n) const override;
   color::SColor transparency() const override;
+  bool requiresUV() const override;
 };
 
 }  // namespace modelling

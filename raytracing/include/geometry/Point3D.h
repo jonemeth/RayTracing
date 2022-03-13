@@ -3,9 +3,12 @@
 #include <cmath>
 #include <iostream>
 
+#include <geometry/types.h>
+#include <geometry/Matrix.h>
+#include <geometry/Point2D.h>
+
 namespace geometry {
 
-using Coord = double;
 
 struct Point3D {
   Coord x, y, z;
@@ -72,5 +75,11 @@ struct Ray {
   Point3D start;
   Normal3D direction;
 };
+
+inline Point2D operator*(Matrix<2, 3> const& M, Point3D const& p)
+{
+  Matrix<2, 1> R = M * Matrix<3, 1>{{{p.x}, {p.y}, {p.z}}};
+  return {R.values[0][0], R.values[1][0]};
+}
 
 }  // namespace geometry

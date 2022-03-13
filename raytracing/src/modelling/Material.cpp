@@ -12,24 +12,22 @@ color::SColor Material::transparency() const {
   return color::SColor({0.0, 0.0, 0.0});
 }
 
-Reflections Material::reflections(geometry::Normal3D const &N,
-                                  geometry::Normal3D const &V, size_t n) const {
-  Reflections r;
-  for (size_t i = 0; i < n; ++i) r.push_back(reflection(N, V));
-  return r;
-}
+bool Material::requiresUV() const { return false; }
 
 /**
  * @brief Construct a new Diffuse Material:: Diffuse Material object
  *
  * @param spectrum
  */
-DiffuseMaterial::DiffuseMaterial(color::SColor spectrum)
-    : m_spectrum(std::move(spectrum)) {}
+DiffuseMaterial::DiffuseMaterial(color::SColor spectrum,
+                                 std::shared_ptr<modelling::Texture> texture)
+    : m_spectrum(std::move(spectrum)), m_texture(std::move(texture)) {}
 
 color::SColor DiffuseMaterial::BRDF(geometry::Normal3D const &,
                                     geometry::Normal3D const &,
-                                    geometry::Normal3D const &) const {
+                                    geometry::Normal3D const &,
+                                    geometry::Point2D const &uv) const {
+  if (m_texture != nullptr) return m_spectrum * m_texture->get(uv);
   return m_spectrum;
 }
 
@@ -38,7 +36,8 @@ color::Intensity DiffuseMaterial::averageAlbedo() const {
 }
 
 Reflection DiffuseMaterial::reflection(geometry::Normal3D const &N,
-                                       geometry::Normal3D const &V) const {
+                                       geometry::Normal3D const &V,
+                                       geometry::Point2D const &uv) const {
   static std::random_device rd;
   static std::mt19937 gen(rd());
   static std::uniform_real_distribution<geometry::Coord> dist(0.0, 1.0);
@@ -61,8 +60,10 @@ Reflection DiffuseMaterial::reflection(geometry::Normal3D const &N,
 
   double prob = std::cos(theta) / M_PI;
 
-  return {prob, L, BRDF(L, N, V)};
+  return {prob, L, BRDF(L, N, V, uv)};
 }
+
+bool DiffuseMaterial::requiresUV() const { return m_texture != nullptr; }
 
 SpecularMaterial::SpecularMaterial(color::SColor spectrum,
                                    color::Intensity shine)
@@ -70,7 +71,8 @@ SpecularMaterial::SpecularMaterial(color::SColor spectrum,
 
 color::SColor SpecularMaterial::BRDF(geometry::Normal3D const &L,
                                      geometry::Normal3D const &N,
-                                     geometry::Normal3D const &V) const {
+                                     geometry::Normal3D const &V,
+                                     geometry::Point2D const &) const {
   geometry::Coord cos_in = L * N;
 
   if (cos_in > 1e-2 && m_spectrum.luminance() != 0) {
@@ -90,7 +92,8 @@ color::Intensity SpecularMaterial::averageAlbedo() const {
 }
 
 Reflection SpecularMaterial::reflection(geometry::Normal3D const &N,
-                                        geometry::Normal3D const &V) const {
+                                        geometry::Normal3D const &V,
+                                        geometry::Point2D const &uv) const {
   static std::random_device rd;
   static std::mt19937 gen(rd());
   static std::uniform_real_distribution<geometry::Coord> dist(0.0, 1.0);
@@ -122,7 +125,7 @@ Reflection SpecularMaterial::reflection(geometry::Normal3D const &N,
     return {0.0, geometry::Vector3D{0.0, 0.0, 0.0},
             color::SColor({0.0, 0.0, 0.0})};
 
-  return {prob, L, BRDF(L, N, V)};
+  return {prob, L, BRDF(L, N, V, uv)};
 }
 
 /**
@@ -137,22 +140,18 @@ color::SColor &IdealReflector::kr() { return m_Kr; }
 color::SColor const &IdealReflector::kr() const { return m_Kr; }
 
 Reflection IdealReflector::reflection(geometry::Normal3D const &N,
-                                      geometry::Normal3D const &V) const {
+                                      geometry::Normal3D const &V,
+                                      geometry::Point2D const &) const {
   geometry::Vector3D L = N * (N * V) * 2 - V;
   geometry::Coord cost = N * L;
   color::SColor brdf = cost > 1e-2 ? m_Kr / cost : color::SColor(0);
   return {1.0, L, brdf};
 }
 
-Reflections IdealReflector::reflections(geometry::Normal3D const &N,
-                                        geometry::Normal3D const &V,
-                                        size_t) const {
-  return {reflection(N, V)};
-}
-
 color::SColor IdealReflector::BRDF(geometry::Normal3D const &,
                                    geometry::Normal3D const &,
-                                   geometry::Normal3D const &) const {
+                                   geometry::Normal3D const &,
+                                   geometry::Point2D const &) const {
   return color::SColor(0.0);
 }
 
@@ -170,7 +169,8 @@ color::SColor &IdealRefractor::kt() { return m_Kt; }
 color::SColor const &IdealRefractor::kt() const { return m_Kt; }
 
 Reflection IdealRefractor::reflection(geometry::Normal3D const &N,
-                                      geometry::Normal3D const &V) const {
+                                      geometry::Normal3D const &V,
+                                      geometry::Point2D const &) const {
   geometry::Coord cosa = N * V;
   color::Intensity cn = (cosa > 0.0) ? m_N : 1.0 / m_N;
   geometry::Normal3D norm = (cosa < 0.0) ? -N : N;
@@ -190,15 +190,10 @@ Reflection IdealRefractor::reflection(geometry::Normal3D const &N,
   return {1.0, L, brdf};
 }
 
-Reflections IdealRefractor::reflections(geometry::Normal3D const &N,
-                                        geometry::Normal3D const &V,
-                                        size_t) const {
-  return {reflection(N, V)};
-}
-
 color::SColor IdealRefractor::BRDF(geometry::Normal3D const &,
                                    geometry::Normal3D const &,
-                                   geometry::Normal3D const &) const {
+                                   geometry::Normal3D const &,
+                                   geometry::Point2D const &) const {
   return color::SColor(0.0);
 }
 
@@ -213,20 +208,24 @@ color::SColor IdealRefractor::transparency() const { return m_Kt; }
 GeneralMaterial::GeneralMaterial(color::SColor diffuseColor,
                                  color::SColor specularColor,
                                  color::Intensity shine, color::SColor kr,
-                                 color::SColor kt, color::Intensity N)
-    : DiffuseMaterial(std::move(diffuseColor)),
+                                 color::SColor kt, color::Intensity N,
+                                 std::shared_ptr<Texture> texture)
+    : DiffuseMaterial(std::move(diffuseColor), std::move(texture)),
       SpecularMaterial(std::move(specularColor), shine),
       IdealReflector(std::move(kr)),
       IdealRefractor(std::move(kt), N) {}
 
 color::SColor GeneralMaterial::BRDF(geometry::Normal3D const &L,
                                     geometry::Normal3D const &N,
-                                    geometry::Normal3D const &V) const {
-  return DiffuseMaterial::BRDF(L, N, V) + SpecularMaterial::BRDF(L, N, V);
+                                    geometry::Normal3D const &V,
+                                    geometry::Point2D const &uv) const {
+  return DiffuseMaterial::BRDF(L, N, V, uv) +
+         SpecularMaterial::BRDF(L, N, V, uv);
 }
 
 Reflection GeneralMaterial::reflection(geometry::Normal3D const &N,
-                                       geometry::Normal3D const &V) const {
+                                       geometry::Normal3D const &V,
+                                       geometry::Point2D const &uv) const {
   static std::random_device rd;
   static std::mt19937 gen(rd());
   static std::uniform_real_distribution<double> dist(0.0, 1.0);
@@ -245,70 +244,23 @@ Reflection GeneralMaterial::reflection(geometry::Normal3D const &N,
   double p = dist(gen);
 
   if ((p -= w1) < 0) {
-    Reflection r = DiffuseMaterial::reflection(N, V);
+    Reflection r = DiffuseMaterial::reflection(N, V, uv);
     r.prob *= w1;
     return r;
   }
   if ((p -= w2) < 0) {
-    Reflection r = SpecularMaterial::reflection(N, V);
+    Reflection r = SpecularMaterial::reflection(N, V, uv);
     r.prob *= w2;
     return r;
   }
   if ((p -= w3) < 0) {
-    Reflection r = IdealReflector::reflection(N, V);
+    Reflection r = IdealReflector::reflection(N, V, uv);
     r.prob *= w3;
     return r;
   }
-  Reflection r = IdealRefractor::reflection(N, V);
+  Reflection r = IdealRefractor::reflection(N, V, uv);
   r.prob *= w4;
   return r;
-}
-
-Reflections GeneralMaterial::reflections(geometry::Normal3D const &N,
-                                         geometry::Normal3D const &V,
-                                         size_t n) const {
-  return Material::reflections(N, V, n);
-  
-  /* Wrong
-  Reflections results;
-
-  std::vector<int> indices = {0, 1, 2, 3};
-  std::random_shuffle(indices.begin(), indices.end());
-
-
-  double w1 = DiffuseMaterial::averageAlbedo();
-  double w2 = SpecularMaterial::averageAlbedo();
-  double w3 = IdealReflector::kr().luminance();
-  double w4 = IdealRefractor::kt().luminance();
-
-  double sum = w1 + w2 + w3 + w4;
-  w1 /= sum;
-  w2 /= sum;
-  w3 /= sum;
-  w4 /= sum;
-
-  for (size_t i = 0; i < n; ++i) {
-    int index = indices[i % 4];
-    if (0 == index) {
-      Reflection r = DiffuseMaterial::reflection(N, V);
-      r.prob *= w1;
-      results.push_back(r);
-    } else if (1 == index) {
-      Reflection r = SpecularMaterial::reflection(N, V);
-      r.prob *= w2;
-      results.push_back(r);
-    } else if (2 == index) {
-      Reflection r = IdealReflector::reflection(N, V);
-      r.prob *= w3;
-      results.push_back(r);
-    } else if (3 == index){
-      Reflection r = IdealRefractor::reflection(N, V);
-      r.prob *= w4;
-      results.push_back(r);
-    }
-  }
-
-  return results;*/
 }
 
 color::SColor GeneralMaterial::transparency() const {
@@ -322,6 +274,11 @@ color::SColor GeneralMaterial::transparency() const {
           IdealReflector::transparency() * w3 +
           IdealRefractor::transparency() * w4) /
          (w1 + w2 + w3 + w4);
+}
+
+bool GeneralMaterial::requiresUV() const {
+  return DiffuseMaterial::requiresUV() || SpecularMaterial::requiresUV() ||
+         IdealReflector::requiresUV() || IdealRefractor::requiresUV();
 }
 
 }  // namespace modelling

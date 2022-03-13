@@ -57,49 +57,13 @@ color::SColor directLightSource(RenderScene const& renderScene,
 
     color::SColor atten = intersectShadow(renderScene, rayToLight, lightDist);
 
-    c += atten * primitive->BRDF(L, N, V) * Le;
+    c += atten * primitive->BRDF(L, N, V, x) * Le;
   }
   return c;
 }
 
-/*
-std::vector<size_t> reflectionSchedule = {1, 1}; //4, 3, 2, 1, 1};
-color::SColor traceGlobal2(RenderScene const& renderScene, geometry::Ray ray,
-                          size_t d) {
-  if (d > MAXDEPTH) return color::SColor(0);
-
-  auto [primitive, t] = intersect(renderScene, ray);
-
-  if (!primitive) return color::SColor(0.0);
-  geometry::Point3D x = ray.start + t * ray.direction;
-  geometry::Normal3D normal = primitive->normal(x);
-  color::SColor c =
-      directLightSource(renderScene, primitive, x, normal, -ray.direction);
-
-  modelling::Reflections reflections = primitive->reflections(
-      normal, -ray.direction,
-      ((d < reflectionSchedule.size()) ? reflectionSchedule[d] : 1));
-
-  color::SColor ac(0);
-
-  for (auto const& reflection : reflections) {
-    if (reflection.prob < 1e-3) continue;
-
-    geometry::Coord cost = reflection.dir * normal;
-    if (cost < 0) cost = -cost;
-    if (cost > 1e-3) {
-      color::SColor w = reflection.color * cost * reflection.prob;
-      if (w.luminance() > 1e-3) {
-        ac += traceGlobal2(renderScene, {x, reflection.dir}, d + 1) * w;
-      }
-    }
-  }
-
-  return c + ac / static_cast<color::Intensity>(reflections.size());
-}*/
-
-/*color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray,
-                          size_t d) {
+color::SColor traceGlobal_recursive(RenderScene const& renderScene,
+                                    geometry::Ray ray, size_t d) {
   if (d > MAXDEPTH) return color::SColor(0);
 
   auto [primitive, t] = intersect(renderScene, ray);
@@ -111,7 +75,7 @@ color::SColor traceGlobal2(RenderScene const& renderScene, geometry::Ray ray,
       directLightSource(renderScene, primitive, x, normal, -ray.direction);
 
   modelling::Reflection reflection =
-      primitive->reflection(normal, -ray.direction);
+      primitive->reflection(normal, -ray.direction, x);
 
   if (reflection.prob < 1e-2) return c;
 
@@ -120,12 +84,12 @@ color::SColor traceGlobal2(RenderScene const& renderScene, geometry::Ray ray,
   if (cost > 1e-2) {
     color::SColor w = reflection.color * cost * reflection.prob;
     if (w.luminance() > 1e-2) {
-      c += traceGlobal(renderScene, {x, reflection.dir}, d + 1) * w;
+      c += traceGlobal_recursive(renderScene, {x, reflection.dir}, d + 1) * w;
     }
   }
 
   return c;
-}*/
+}
 
 color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
   color::SColor c(0);
@@ -141,7 +105,7 @@ color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
          directLightSource(renderScene, primitive, x, normal, -ray.direction);
 
     modelling::Reflection reflection =
-        primitive->reflection(normal, -ray.direction);
+        primitive->reflection(normal, -ray.direction, x);
 
     if (reflection.prob < 1e-2) break;
 
@@ -157,8 +121,8 @@ color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
   return c;
 }
 
-color::ImageData render(RenderScene const& renderScene, color::ImageSize imageSize,
-                 size_t gridSize) {
+color::ImageData render(RenderScene const& renderScene,
+                        color::ImageSize imageSize, size_t gridSize) {
   color::ImageData imageData;
   imageData.reserve(imageSize.height * imageSize.width);
 

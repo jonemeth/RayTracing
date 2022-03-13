@@ -44,8 +44,18 @@ struct RGB {
     this->b = std::max(color::Intensity(0.0), std::min(color::Intensity(1.0), this->b));
   }
 
+  operator SColor() const {
+    SColor c;
+    c.intensities()[0] = b;
+    c.intensities()[1] = g;
+    c.intensities()[2] = r;
+    return c;    
+  }
+
   Intensity r, g, b;
 };
+
+
 
 inline std::ostream &operator<<(std::ostream &os, RGB const &rgb) {
   os << "[" << rgb.r << "," << rgb.g << "," << rgb.b << "]";

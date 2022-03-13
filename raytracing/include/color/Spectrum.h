@@ -28,9 +28,11 @@ class Spectrum {
   }
 
   Lambdas const& lambdas() const { return m_lambdas; }
+
+  Intensities& intensities() { return m_intensities; }
   Intensities const& intensities() const { return m_intensities; }
 
-  Spectrum<nLambdas> operator*(Spectrum<nLambdas> const& s2) {
+  Spectrum<nLambdas> operator*(Spectrum<nLambdas> const& s2) const {
     Spectrum<nLambdas> result;
     std::transform(m_intensities.begin(), m_intensities.end(),
                    s2.m_intensities.begin(), result.m_intensities.begin(),

@@ -11,10 +11,27 @@
 #include <iostream>
 #include <memory>
 
+#include <geometry/Matrix.h>
+
 int main() {
   namespace c = color;
   namespace g = geometry;
   namespace m = modelling;
+/*
+  geometry::Matrix<3,3> mat{ {{1, -2, 1}, {-1, 1, -2}, {4, 5, 1}} };
+//  geometry::Matrix<3,3> mat{ {{1, 2, 3}, {0, 1, 4}, {5, 6, 0}} };
+  std::cout << mat << std::endl << std::endl;
+  std::cout << mat.det() << std::endl << std::endl;
+  
+  std::cout << mat.inv() << std::endl << std::endl;
+  std::cout << mat.inv()*mat << std::endl << std::endl;
+  std::cout << mat*mat.inv() << std::endl << std::endl;
+
+  return 0;*/
+
+  /*color::Image im = color::loadImage("./resources/chess.png");
+  color::saveImage("out.png", im);
+  return 0;*/
 
   double angle = -45.0 * M_PI / 180.0;
   modelling::Camera camera(
@@ -22,6 +39,11 @@ int main() {
       {0.0, std::cos(angle), std::sin(angle)},
       {0.0, 5.0 - 3.0 * std::sin(angle), 3.0 * std::cos(angle)});
 
+  // Textures
+  std::shared_ptr<m::Texture> chessText = std::make_shared<m::Texture>("resources/chess.png");
+
+
+  // Materials
   std::shared_ptr<m::Material> redMat = std::make_shared<m::GeneralMaterial>(
       c::SColor({0.0, 0.0, 1.0}), c::SColor({0.3, 0.3, 0.6}), 16.0,
       c::SColor({0.7, 0.7, 1.0}), c::SColor({0.0, 0.0, 0.0}), 0.0);
@@ -35,7 +57,7 @@ int main() {
 
   std::shared_ptr<m::Material> grayMat = std::make_shared<m::GeneralMaterial>(
       c::SColor({0.8, 0.8, 0.8}), c::SColor({0.1, 0.1, 0.1}), 32.0,
-      c::SColor({0.9, 0.9, 0.9}), c::SColor({0.0, 0.0, 0.0}), 0.0);
+      c::SColor({0.9, 0.9, 0.9}), c::SColor({0.0, 0.0, 0.0}), 0.0, chessText);
 
   std::shared_ptr<m::Material> glassMat = std::make_shared<m::GeneralMaterial>(
       c::SColor({0.0, 0.0, 0.0}), c::SColor({0.8, 0.8, 0.8}), 64.0,
@@ -75,11 +97,11 @@ int main() {
 
   scene.primitives.emplace_back(std::make_shared<m::Triangle>(
       g::Point3D{-20, -4, 0}, g::Point3D{-20, -4, -12}, g::Point3D{20, -4, -12},
-      grayMat));
+      grayMat, g::Point2D{0, 1}, g::Point2D{0, 0}, g::Point2D{1, 0}));
 
   scene.primitives.emplace_back(std::make_shared<m::Triangle>(
       g::Point3D{-20, -4, 0}, g::Point3D{20, -4, -12}, g::Point3D{20, -4, 0},
-      grayMat));
+      grayMat, g::Point2D{0, 1}, g::Point2D{1, 0}, g::Point2D{1, 1}));
 
   scene.emitters.emplace_back(std::make_shared<m::SphereLight>(
       g::Point3D{3.0, 5.0, -7.0}, 0.4, c::SColor({6.3, 2.3, 1.4}) * 80.0));
@@ -88,9 +110,9 @@ int main() {
       g::Point3D{-6.0, 5.0, -0.0}, 0.4, c::SColor({6.3, 2.3, 1.4}) * 80.0));
 
   
-  rendering::ImageSize imageSize{320, 240};
+  color::ImageSize imageSize{320, 240};
   auto start = std::chrono::steady_clock::now();
-  rendering::ImageData imageData = render(scene, imageSize);
+  color::ImageData imageData = render(scene, imageSize);
   auto end = std::chrono::steady_clock::now();
 
   std::cout << "Elapsed time: "
@@ -98,5 +120,5 @@ int main() {
                                                                      start)
                    .count()
             << " ms" << std::endl;
-  rendering::saveImage("render.png", {imageSize, imageData});
+  color::saveImage("render.png", {imageSize, imageData});
 }
