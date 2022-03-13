@@ -13,4 +13,4 @@ add_subdirectory(raytracing)
 
 add_executable(main main.cpp)
 target_include_directories(main PRIVATE raytracing/include)
-target_link_libraries(main raytracing external)
+target_link_libraries(main raytracing external png)
