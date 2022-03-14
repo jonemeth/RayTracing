@@ -5,13 +5,13 @@
 
 namespace geometry {
 
-class Sphere : public Surface {
+class Sphere : virtual public Surface {
  public:
   Sphere(Point3D center, Coord radius);
   Coord intersect(Ray const& ray) override;
-  geometry::Normal3D normal(geometry::Point3D const& x) override;
+  geometry::Normal3D normal(geometry::Point3D const& x) const override;
 
- private:
+ protected:
   Point3D m_center;
   Coord m_radius, m_radius2;
 };

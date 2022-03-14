@@ -46,9 +46,9 @@ struct RGB {
 
   operator SColor() const {
     SColor c;
-    c.intensities()[0] = b;
-    c.intensities()[1] = g;
-    c.intensities()[2] = r;
+    c.intensities()[0] = b * 1.0;
+    c.intensities()[1] = g * 1.0;
+    c.intensities()[2] = r * 1.5;
     return c;    
   }
 

@@ -1,56 +1,70 @@
 #pragma once
 
+#include <geometry/Matrix.h>
 #include <geometry/Point2D.h>
 #include <geometry/Point3D.h>
+#include <geometry/Sphere.h>
 #include <geometry/Surface.h>
-#include <geometry/Matrix.h>
+#include <geometry/Triangle.h>
 #include <modelling/Material.h>
+#include <modelling/NormalMap.h>
 
 #include <memory>
 
 namespace modelling {
 
-class Primitive {
+class Primitive : virtual public geometry::Surface {
  public:
-  Primitive(std::unique_ptr<geometry::Surface> surface,
-            std::shared_ptr<Material> material);
+  Primitive(std::shared_ptr<Material> material, std::shared_ptr<NormalMap> normalMap = nullptr);
 
-  geometry::Coord intersect(geometry::Ray const& ray) const;
   color::SColor BRDF(geometry::Normal3D const& L, geometry::Normal3D const& N,
                      geometry::Normal3D const& V,
-                     geometry::Point3D const& x) const;
-  geometry::Normal3D normal(geometry::Point3D const& x) const;
+                     geometry::Point2D const& uv) const;
+
   Reflection reflection(geometry::Normal3D const& N,
-                        geometry::Normal3D const& V, geometry::Point3D const& x) const;
+                        geometry::Normal3D const& V,
+                        geometry::Point2D const& uv) const;
 
   color::SColor transparency() const;
 
-  virtual geometry::Point2D getUV(geometry::Point3D const& x) const = 0;
+  bool requiresUV() const;
 
- private:
-  std::unique_ptr<geometry::Surface> m_surface;
+  virtual geometry::Point2D getUV(geometry::Point3D const& x) const = 0;
+  
+  virtual geometry::Normal3D normal(geometry::Point3D const& x, geometry::Point2D const & uv) const;
+  using Surface::normal;
+
+ protected:
   std::shared_ptr<Material> m_material;
+  std::shared_ptr<NormalMap> m_normalMap;
 };
 
-class Sphere : public Primitive {
+class Sphere : public geometry::Sphere, public Primitive {
  public:
   Sphere(geometry::Point3D const& center, geometry::Coord const& radius,
-         std::shared_ptr<Material> material);
+         std::shared_ptr<Material> material, std::shared_ptr<NormalMap> normalMap = nullptr);
+
   geometry::Point2D getUV(geometry::Point3D const& x) const;
+  geometry::Normal3D normal(geometry::Point3D const& x, geometry::Point2D const & uv) const override;
 };
 
-class Triangle : public Primitive {
+class Triangle : public geometry::Triangle, public Primitive {
  public:
   Triangle(geometry::Point3D p1, geometry::Point3D p2, geometry::Point3D p3,
            std::shared_ptr<Material> material,
            geometry::Point2D uv1 = geometry::Point2D{0, 0},
            geometry::Point2D uv2 = geometry::Point2D{1, 0},
-           geometry::Point2D uv3 = geometry::Point2D{0, 1});
+           geometry::Point2D uv3 = geometry::Point2D{0, 1},
+           std::shared_ptr<NormalMap> normalMap = nullptr,
+           geometry::Point3D su = geometry::Point3D{1, 0, 0},
+           geometry::Point3D sv = geometry::Point3D{0, 1, 0});
+           
   geometry::Point2D getUV(geometry::Point3D const& x) const;
+  geometry::Normal3D normal(geometry::Point3D const& x, geometry::Point2D const & uv) const override;
 
  private:
-  geometry::Point2D m_uv1, m_uv2, m_uv3;
   geometry::Matrix<2, 3> m_uvMap;
+  geometry::Point3D m_su, m_sv;
 };
 
 }  // namespace modelling

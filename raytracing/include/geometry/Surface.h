@@ -8,7 +8,7 @@ class Surface {
  public:
   virtual ~Surface();
   virtual Coord intersect(Ray const& ray) = 0;
-  virtual geometry::Normal3D normal(geometry::Point3D const& x) = 0;
+  virtual geometry::Normal3D normal(geometry::Point3D const& x) const = 0;
 
 };
 

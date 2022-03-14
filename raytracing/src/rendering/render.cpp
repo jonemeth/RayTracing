@@ -45,7 +45,8 @@ color::SColor directLightSource(RenderScene const& renderScene,
                                 std::shared_ptr<modelling::Primitive> primitive,
                                 geometry::Point3D const& x,
                                 geometry::Normal3D const& N,
-                                geometry::Normal3D const& V) {
+                                geometry::Normal3D const& V,
+                                geometry::Point2D const& uv) {
   color::SColor c(0.0);
 
   for (auto const emitter : renderScene.emitters) {
@@ -57,7 +58,7 @@ color::SColor directLightSource(RenderScene const& renderScene,
 
     color::SColor atten = intersectShadow(renderScene, rayToLight, lightDist);
 
-    c += atten * primitive->BRDF(L, N, V, x) * Le;
+    c += atten * primitive->BRDF(L, N, V, uv) * Le;
   }
   return c;
 }
@@ -70,12 +71,14 @@ color::SColor traceGlobal_recursive(RenderScene const& renderScene,
 
   if (!primitive) return color::SColor(0.0);
   geometry::Point3D x = ray.start + t * ray.direction;
-  geometry::Normal3D normal = primitive->normal(x);
+  geometry::Point2D uv = primitive->requiresUV() ? primitive->getUV(x)
+                                                 : geometry::Point2D{0.0, 0.0};
+  geometry::Normal3D normal = primitive->normal(x, uv);
   color::SColor c =
-      directLightSource(renderScene, primitive, x, normal, -ray.direction);
+      directLightSource(renderScene, primitive, x, normal, -ray.direction, uv);
 
   modelling::Reflection reflection =
-      primitive->reflection(normal, -ray.direction, x);
+      primitive->reflection(normal, -ray.direction, uv);
 
   if (reflection.prob < 1e-2) return c;
 
@@ -100,12 +103,14 @@ color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
 
     if (!primitive) break;
     geometry::Point3D x = ray.start + t * ray.direction;
-    geometry::Normal3D normal = primitive->normal(x);
-    c += w *
-         directLightSource(renderScene, primitive, x, normal, -ray.direction);
+  geometry::Point2D uv = primitive->requiresUV() ? primitive->getUV(x)
+                                                 : geometry::Point2D{0.0, 0.0};
+    geometry::Normal3D normal = primitive->normal(x, uv);
+    c += w * directLightSource(renderScene, primitive, x, normal,
+                               -ray.direction, uv);
 
     modelling::Reflection reflection =
-        primitive->reflection(normal, -ray.direction, x);
+        primitive->reflection(normal, -ray.direction, uv);
 
     if (reflection.prob < 1e-2) break;
 

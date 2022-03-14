@@ -32,7 +32,7 @@ Coord Triangle::intersect(Ray const& ray) {
   return t;
 }
 
-geometry::Normal3D Triangle::normal(geometry::Point3D const&) {
+geometry::Normal3D Triangle::normal(geometry::Point3D const&) const {
   return m_normal;
 }
 

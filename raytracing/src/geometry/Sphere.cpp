@@ -31,7 +31,7 @@ Coord Sphere::intersect(Ray const& ray) {
   return t1 < t2 ? t1 : t2;
 }
 
-geometry::Normal3D Sphere::normal(geometry::Point3D const& x) {
+geometry::Normal3D Sphere::normal(geometry::Point3D const& x) const {
   return x - m_center;
 }
 

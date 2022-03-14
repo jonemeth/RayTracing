@@ -1,10 +1,10 @@
-#include <modelling/Texture.h>
+#include <modelling/NormalMap.h>
 
 #include <cmath>
 
 namespace modelling {
 
-Texture::Texture(std::string filename, Interpolation interpolation)
+NormalMap::NormalMap(std::string filename, Interpolation interpolation)
     : m_interpolation(interpolation) {
   color::Image image = color::loadImage(filename);
   size = image.size;
@@ -12,10 +12,10 @@ Texture::Texture(std::string filename, Interpolation interpolation)
   values.resize(size.width * size.height);
 
   std::transform(image.data.begin(), image.data.end(), values.begin(),
-                 [](color::RGB const& rgb) { return color::SColor(rgb); });
+                 [](color::RGB const& rgb) { return geometry::Vector3D{rgb.r-0.5, rgb.g-0.5, rgb.b-0.5}; });
 }
 
-color::SColor const Texture::get(geometry::Point2D const& p) const {
+geometry::Vector3D const NormalMap::get(geometry::Point2D const& p) const {
   geometry::Coord x =
       fmod(p.x, 1.0) * static_cast<geometry::Coord>(size.width - 1);
   geometry::Coord y =
