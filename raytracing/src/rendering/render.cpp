@@ -2,8 +2,6 @@
 
 namespace rendering {
 
-#define MAXDEPTH (32)
-
 struct Intersection {
   std::shared_ptr<modelling::Primitive> primitive;
   geometry::Coord x;
@@ -64,8 +62,9 @@ color::SColor directLightSource(RenderScene const& renderScene,
 }
 
 color::SColor traceGlobal_recursive(RenderScene const& renderScene,
-                                    geometry::Ray ray, size_t d) {
-  if (d > MAXDEPTH) return color::SColor(0);
+                                    geometry::Ray ray, size_t d,
+                                    size_t maxDepth) {
+  if (d > maxDepth) return color::SColor(0);
 
   auto [primitive, t] = intersect(renderScene, ray);
 
@@ -87,24 +86,28 @@ color::SColor traceGlobal_recursive(RenderScene const& renderScene,
   if (cost > 1e-2) {
     color::SColor w = reflection.color * cost * reflection.prob;
     if (w.luminance() > 1e-2) {
-      c += traceGlobal_recursive(renderScene, {x, reflection.dir}, d + 1) * w;
+      c += traceGlobal_recursive(renderScene, {x, reflection.dir}, d + 1,
+                                 maxDepth) *
+           w;
     }
   }
 
   return c;
 }
 
-color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
+color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray,
+                          size_t maxDepth) {
   color::SColor c(0);
   color::SColor w(1);
 
-  for (size_t i = 0; i < MAXDEPTH; ++i) {
+  for (size_t i = 0; i < maxDepth; ++i) {
     auto [primitive, t] = intersect(renderScene, ray);
 
     if (!primitive) break;
     geometry::Point3D x = ray.start + t * ray.direction;
-  geometry::Point2D uv = primitive->requiresUV() ? primitive->getUV(x)
-                                                 : geometry::Point2D{0.0, 0.0};
+    geometry::Point2D uv = primitive->requiresUV()
+                               ? primitive->getUV(x)
+                               : geometry::Point2D{0.0, 0.0};
     geometry::Normal3D normal = primitive->normal(x, uv);
     c += w * directLightSource(renderScene, primitive, x, normal,
                                -ray.direction, uv);
@@ -127,7 +130,8 @@ color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray) {
 }
 
 color::ImageData render(RenderScene const& renderScene,
-                        color::ImageSize imageSize, size_t gridSize) {
+                        color::ImageSize imageSize, size_t gridSize,
+                        size_t maxDepth) {
   color::ImageData imageData;
   imageData.reserve(imageSize.height * imageSize.width);
 
@@ -137,6 +141,7 @@ color::ImageData render(RenderScene const& renderScene,
 
   for (size_t i = 0; i < imageSize.height; ++i) {
     for (size_t j = 0; j < imageSize.width; ++j) {
+      color::SColor c(0);
       for (size_t u = 0; u < gridSize; ++u) {
         for (size_t v = 0; v < gridSize; ++v) {
           geometry::Coord ii = static_cast<geometry::Coord>(i) +
@@ -151,21 +156,15 @@ color::ImageData render(RenderScene const& renderScene,
           geometry::Coord x =
               2 * jj / static_cast<geometry::Coord>(imageSize.width - 1) - 1;
 
-          allRaySamples[i * imageSize.width + j].push_back(
-              renderScene.camera.getRay(x, y));
+          c += traceGlobal(renderScene, renderScene.camera.getRay(x, y),
+                           maxDepth);
         }
       }
+
+      c /= static_cast<color::Intensity>(gridSize * gridSize);
+
+      imageData.emplace_back(color::RGB(c));
     }
-  }
-
-  for (auto const& raySamples : allRaySamples) {
-    color::SColor c(0);
-
-    for (auto const& ray : raySamples) c += traceGlobal(renderScene, ray);
-
-    c /= static_cast<color::Intensity>(gridSize * gridSize);
-
-    imageData.emplace_back(color::RGB(c));
   }
 
   return imageData;

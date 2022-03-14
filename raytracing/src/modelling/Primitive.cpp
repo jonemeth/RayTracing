@@ -44,7 +44,7 @@ geometry::Point2D Sphere::getUV(geometry::Point3D const& x) const {
   geometry::Coord u = std::atan2(p.x, p.z) / (2 * M_PI) + 0.5;
   geometry::Coord v =
       std::atan2(p.y, std::sqrt(p.x * p.x + p.z * p.z)) / M_PI + 0.5;
-  return geometry::Point2D{u, v};
+  return geometry::Point2D{u, 1.0-v};
 }
 
 geometry::Normal3D Sphere::normal(geometry::Point3D const& x,
