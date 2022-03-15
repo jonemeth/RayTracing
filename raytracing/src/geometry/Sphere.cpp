@@ -6,10 +6,13 @@ namespace geometry {
 
 #define EPSILON (1e-8)
 
-Sphere::Sphere(Point3D center, Coord radius)
-    : m_center(std::move(center)), m_radius(std::move(radius)), m_radius2(m_radius*m_radius) {}
 
-Coord Sphere::intersect(Ray const& ray) {
+Sphere::Sphere(Point3D center, Coord radius)
+    : m_center(std::move(center)),
+      m_radius(std::move(radius)),
+      m_radius2(m_radius * m_radius) {}
+
+Coord Sphere::intersect(Ray const& ray) const {
   Vector3D dist = ray.start - m_center;
   Coord b = (dist * ray.direction) * 2.0;
   Coord a = ray.direction * ray.direction;
@@ -34,6 +37,5 @@ Coord Sphere::intersect(Ray const& ray) {
 geometry::Normal3D Sphere::normal(geometry::Point3D const& x) const {
   return x - m_center;
 }
-
 
 }  // namespace geometry

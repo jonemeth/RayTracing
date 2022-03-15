@@ -15,7 +15,8 @@ namespace modelling {
 
 class Primitive : virtual public geometry::Surface {
  public:
-  Primitive(std::shared_ptr<Material> material, std::shared_ptr<NormalMap> normalMap = nullptr);
+  Primitive(std::shared_ptr<Material> material,
+            std::shared_ptr<NormalMap> normalMap);
 
   color::SColor BRDF(geometry::Normal3D const& L, geometry::Normal3D const& N,
                      geometry::Normal3D const& V,
@@ -30,8 +31,9 @@ class Primitive : virtual public geometry::Surface {
   bool requiresUV() const;
 
   virtual geometry::Point2D getUV(geometry::Point3D const& x) const = 0;
-  
-  virtual geometry::Normal3D normal(geometry::Point3D const& x, geometry::Point2D const & uv) const;
+
+  virtual geometry::Normal3D normal(geometry::Point3D const& x,
+                                    geometry::Point2D const& uv) const = 0;
   using Surface::normal;
 
  protected:
@@ -41,11 +43,17 @@ class Primitive : virtual public geometry::Surface {
 
 class Sphere : public geometry::Sphere, public Primitive {
  public:
-  Sphere(geometry::Point3D const& center, geometry::Coord const& radius,
-         std::shared_ptr<Material> material, std::shared_ptr<NormalMap> normalMap = nullptr);
+  Sphere(geometry::Point3D center, geometry::Coord radius,
+         geometry::Matrix<4, 4> orientation, std::shared_ptr<Material> material,
+         std::shared_ptr<NormalMap> normalMap = nullptr);
 
-  geometry::Point2D getUV(geometry::Point3D const& x) const;
-  geometry::Normal3D normal(geometry::Point3D const& x, geometry::Point2D const & uv) const override;
+  geometry::Point2D getUV(geometry::Point3D const& x) const override;
+  geometry::Normal3D normal(geometry::Point3D const& x,
+                            geometry::Point2D const& uv) const override;
+
+ private:
+  geometry::Matrix<4, 4> m_orientation;
+  geometry::Matrix<4, 4> m_invOrientation;
 };
 
 class Triangle : public geometry::Triangle, public Primitive {
@@ -58,9 +66,10 @@ class Triangle : public geometry::Triangle, public Primitive {
            std::shared_ptr<NormalMap> normalMap = nullptr,
            geometry::Point3D su = geometry::Point3D{1, 0, 0},
            geometry::Point3D sv = geometry::Point3D{0, 1, 0});
-           
-  geometry::Point2D getUV(geometry::Point3D const& x) const;
-  geometry::Normal3D normal(geometry::Point3D const& x, geometry::Point2D const & uv) const override;
+
+  geometry::Point2D getUV(geometry::Point3D const& x) const override;
+  geometry::Normal3D normal(geometry::Point3D const& x,
+                            geometry::Point2D const& uv) const override;
 
  private:
   geometry::Matrix<2, 3> m_uvMap;

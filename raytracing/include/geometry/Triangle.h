@@ -8,7 +8,7 @@ namespace geometry {
 class Triangle : virtual public Surface {
  public:
   Triangle(Point3D p1, Point3D p2, Point3D p3);
-  Coord intersect(Ray const& ray) override;
+  Coord intersect(Ray const& ray) const override;
   geometry::Normal3D normal(geometry::Point3D const&) const override;
 
  private:

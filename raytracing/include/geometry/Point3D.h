@@ -1,14 +1,13 @@
 #pragma once
 
+#include <geometry/Matrix.h>
+#include <geometry/Point2D.h>
+#include <geometry/types.h>
+
 #include <cmath>
 #include <iostream>
 
-#include <geometry/types.h>
-#include <geometry/Matrix.h>
-#include <geometry/Point2D.h>
-
 namespace geometry {
-
 
 struct Point3D {
   Coord x, y, z;
@@ -76,10 +75,31 @@ struct Ray {
   Normal3D direction;
 };
 
-inline Point2D operator*(Matrix<2, 3> const& M, Point3D const& p)
-{
+inline Point2D operator*(Matrix<2, 3> const &M, Point3D const &p) {
   Matrix<2, 1> R = M * Matrix<3, 1>{{{p.x}, {p.y}, {p.z}}};
   return {R.values[0][0], R.values[1][0]};
+}
+
+inline Point3D operator*(Matrix<4, 4> const &M, Point3D const &p) {
+  Matrix<4, 1> R = M * Matrix<4, 1>{{{p.x}, {p.y}, {p.z}, {1.0}}};
+  return {R.values[0][0] / R.values[3][0], R.values[1][0] / R.values[3][0],
+          R.values[2][0] / R.values[3][0]};
+}
+
+inline Normal3D operator*(Matrix<4, 4> const &M, Normal3D const &n) {
+  Matrix<4, 1> R = M * Matrix<4, 1>{{{n.x}, {n.y}, {n.z}, {1.0}}};
+  Point3D p = {R.values[0][0] / R.values[3][0], R.values[1][0] / R.values[3][0],
+               R.values[2][0] / R.values[3][0]};
+
+  Matrix<4, 1> O = M * Matrix<4, 1>{{{0}, {0}, {0}, {1.0}}};
+  Point3D x = {O.values[0][0] / O.values[3][0], O.values[1][0] / O.values[3][0],
+               O.values[2][0] / O.values[3][0]};
+  return p - x;
+}
+
+inline Ray operator*(Matrix<4, 4> const &M, Ray const &ray) {
+  Point3D x = M * ray.start;
+  return {x, M * (ray.start + ray.direction) - x};
 }
 
 }  // namespace geometry

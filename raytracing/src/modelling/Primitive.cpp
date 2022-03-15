@@ -33,31 +33,43 @@ geometry::Normal3D Primitive::normal(geometry::Point3D const& x,
   return normal(x);
 }
 
-Sphere::Sphere(geometry::Point3D const& center, geometry::Coord const& radius,
+Sphere::Sphere(geometry::Point3D center, geometry::Coord radius,
+               geometry::Matrix<4, 4> orientation,
                std::shared_ptr<Material> material,
                std::shared_ptr<NormalMap> normalMap)
     : geometry::Sphere(center, radius),
-      Primitive(std::move(material), std::move(normalMap)) {}
+      Primitive(std::move(material), std::move(normalMap)),
+      m_orientation(std::move(orientation)),
+      m_invOrientation(m_orientation.inv()) {}
+
+/*geometry::Coord Sphere::intersect(geometry::Ray const& ray) const {
+  geometry::Ray invRay = m_invView * ray;
+  geometry::Coord t = geometry::Sphere::intersect(invRay);
+  if (t <= 0.0) return t;
+  std::cout << ((m_view*invRay.start + m_view*(t * invRay.direction))) <<
+std::endl << std::endl; return (m_view * (invRay.start + t * invRay.direction) -
+ray.start).length();
+}*/
 
 geometry::Point2D Sphere::getUV(geometry::Point3D const& x) const {
-  geometry::Point3D p = (x - m_center) / m_radius;
+  geometry::Point3D p = m_invOrientation* ((x - m_center) / m_radius);
   geometry::Coord u = std::atan2(p.x, p.z) / (2 * M_PI) + 0.5;
   geometry::Coord v =
       std::atan2(p.y, std::sqrt(p.x * p.x + p.z * p.z)) / M_PI + 0.5;
-  return geometry::Point2D{u, 1.0-v};
+  return geometry::Point2D{u, 1.0 - v};
 }
 
 geometry::Normal3D Sphere::normal(geometry::Point3D const& x,
                                   geometry::Point2D const& uv) const {
   geometry::Normal3D n = geometry::Sphere::normal(x);
+  if (m_normalMap) {
+    geometry::Vector3D d = m_normalMap->get(uv);
+    geometry::Normal3D u = n % geometry::Vector3D{0, 1, 0};
+    geometry::Normal3D v = n % u;
+    n = geometry::Normal3D(u * d.x + v * d.y + n * d.z);
+  }
 
-  if (!m_normalMap) return n;
-
-  geometry::Vector3D d = m_normalMap->get(uv);
-
-  geometry::Normal3D u = n % geometry::Vector3D{0, 1, 0};
-  geometry::Normal3D v = n % u;
-  return geometry::Normal3D(u * d.x + v * d.y + n * d.z);
+  return n;
 }
 
 static geometry::Matrix<2, 3> computeLinearUVMap(

@@ -13,7 +13,7 @@ Triangle::Triangle(Point3D p1, Point3D p2, Point3D p3)
       m_B(m_p3 - m_p2),
       m_C(m_p1 - m_p3) {}
 
-Coord Triangle::intersect(Ray const& ray) {
+Coord Triangle::intersect(Ray const& ray) const {
   static Coord EPS = 1e-8;
 
   Coord denominator = m_normal * ray.direction;
