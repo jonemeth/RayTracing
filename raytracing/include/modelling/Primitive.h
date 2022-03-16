@@ -3,9 +3,10 @@
 #include <geometry/Matrix.h>
 #include <geometry/Point2D.h>
 #include <geometry/Point3D.h>
-#include <geometry/Sphere.h>
 #include <geometry/Surface.h>
+#include <geometry/Sphere.h>
 #include <geometry/Triangle.h>
+#include <geometry/Torus.h>
 #include <modelling/Material.h>
 #include <modelling/NormalMap.h>
 
@@ -74,6 +75,22 @@ class Triangle : public geometry::Triangle, public Primitive {
  private:
   geometry::Matrix<2, 3> m_uvMap;
   geometry::Point3D m_su, m_sv;
+};
+
+class Torus : public geometry::Torus, public Primitive {
+ public:
+  Torus(geometry::Coord R, geometry::Coord r,
+         geometry::Matrix<4, 4> view, std::shared_ptr<Material> material,
+         std::shared_ptr<NormalMap> normalMap = nullptr);
+
+  geometry::Coord intersect(geometry::Ray const& ray) const override;
+  geometry::Point2D getUV(geometry::Point3D const& x) const override;
+  geometry::Normal3D normal(geometry::Point3D const& x,
+                            geometry::Point2D const& uv) const override;
+
+ private:
+  geometry::Matrix<4, 4> m_view;
+  geometry::Matrix<4, 4> m_invView;
 };
 
 }  // namespace modelling

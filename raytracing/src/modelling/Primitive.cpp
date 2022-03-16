@@ -33,6 +33,15 @@ geometry::Normal3D Primitive::normal(geometry::Point3D const& x,
   return normal(x);
 }
 
+/**
+ * @brief Construct a new Sphere:: Sphere object
+ *
+ * @param center
+ * @param radius
+ * @param orientation
+ * @param material
+ * @param normalMap
+ */
 Sphere::Sphere(geometry::Point3D center, geometry::Coord radius,
                geometry::Matrix<4, 4> orientation,
                std::shared_ptr<Material> material,
@@ -52,7 +61,7 @@ ray.start).length();
 }*/
 
 geometry::Point2D Sphere::getUV(geometry::Point3D const& x) const {
-  geometry::Point3D p = m_invOrientation* ((x - m_center) / m_radius);
+  geometry::Point3D p = m_invOrientation * ((x - m_center) / m_radius);
   geometry::Coord u = std::atan2(p.x, p.z) / (2 * M_PI) + 0.5;
   geometry::Coord v =
       std::atan2(p.y, std::sqrt(p.x * p.x + p.z * p.z)) / M_PI + 0.5;
@@ -64,7 +73,7 @@ geometry::Normal3D Sphere::normal(geometry::Point3D const& x,
   geometry::Normal3D n = geometry::Sphere::normal(x);
   if (m_normalMap) {
     geometry::Vector3D d = m_normalMap->get(uv);
-    geometry::Normal3D u = n % geometry::Vector3D{0, 1, 0};
+    geometry::Normal3D u = n % geometry::Vector3D{0, -1, 0};
     geometry::Normal3D v = n % u;
     n = geometry::Normal3D(u * d.x + v * d.y + n * d.z);
   }
@@ -90,6 +99,20 @@ static geometry::Matrix<2, 3> computeLinearUVMap(
        {DEF.values[0][0], DEF.values[1][0], DEF.values[2][0]}}};
 }
 
+/**
+ * @brief Construct a new Triangle:: Triangle object
+ *
+ * @param p1
+ * @param p2
+ * @param p3
+ * @param material
+ * @param uv1
+ * @param uv2
+ * @param uv3
+ * @param normalMap
+ * @param su
+ * @param sv
+ */
 Triangle::Triangle(geometry::Point3D p1, geometry::Point3D p2,
                    geometry::Point3D p3, std::shared_ptr<Material> material,
                    geometry::Point2D uv1, geometry::Point2D uv2,
@@ -113,6 +136,62 @@ geometry::Normal3D Triangle::normal(geometry::Point3D const& x,
 
   geometry::Vector3D d = m_normalMap->get(uv);
   return geometry::Normal3D(m_su * d.x + m_sv * d.y + n * d.z);
+}
+
+Torus::Torus(geometry::Coord R, geometry::Coord r, geometry::Matrix<4, 4> view,
+             std::shared_ptr<Material> material,
+             std::shared_ptr<NormalMap> normalMap)
+    : geometry::Torus(R, r),
+      Primitive(std::move(material), std::move(normalMap)),
+      m_view(std::move(view)),
+      m_invView(m_view.inv()) {}
+
+geometry::Coord Torus::intersect(geometry::Ray const& ray) const {
+  geometry::Ray invRay = m_invView * ray;
+  geometry::Coord t = geometry::Torus::intersect(invRay);
+  if (t <= 0.0) return t;
+  return (m_view * (invRay.start + t * invRay.direction) - ray.start).length();
+}
+
+geometry::Point2D Torus::getUV(geometry::Point3D const& x) const {
+  geometry::Point3D p = m_invView * x;
+
+  geometry::Coord u = std::atan2(p.y, p.x) / (2 * M_PI) + 0.5;
+  geometry::Coord v =
+      std::asin(0.9999 * (-p.z / r)) / (M_PI * 2) + 0.5;  // 0.25 .. 0.75
+
+  if (std::isnan(v)) {
+    std::cout << x << " " << p << std::endl;
+    std::cout << p.z << " " << r << std::endl;
+  }
+
+  if (p.x * p.x + p.y * p.y < R * R) {
+    if (v > 0.5)
+      v = 1.5 - v;
+    else
+      v = 0.5 - v;
+  }
+
+  return geometry::Point2D{u, v};
+}
+
+geometry::Normal3D Torus::normal(geometry::Point3D const& x,
+                                 geometry::Point2D const& uv) const {
+  geometry::Point3D p = m_invView * x;
+  geometry::Normal3D n = geometry::Torus::normal(p);
+
+  if (m_normalMap) {
+    geometry::Vector3D d = m_normalMap->get(uv);
+    geometry::Normal3D u = n % geometry::Vector3D{0, 0, -1};
+    if (p.x * p.x + p.y * p.y < R * R) u = -u;
+    geometry::Normal3D v = n % u;
+
+    n = geometry::Normal3D(u * d.x + v * d.y + n * d.z);
+    // std::cout << uv.x << " " << uv.y << " " << d << " " << u << " " << v <<
+    // " " << n << std::endl;
+  }
+  // std::cout << n.length() << std::endl;
+  return m_view * n;
 }
 
 }  // namespace modelling
