@@ -51,15 +51,6 @@ Sphere::Sphere(geometry::Point3D center, geometry::Coord radius,
       m_orientation(std::move(orientation)),
       m_invOrientation(m_orientation.inv()) {}
 
-/*geometry::Coord Sphere::intersect(geometry::Ray const& ray) const {
-  geometry::Ray invRay = m_invView * ray;
-  geometry::Coord t = geometry::Sphere::intersect(invRay);
-  if (t <= 0.0) return t;
-  std::cout << ((m_view*invRay.start + m_view*(t * invRay.direction))) <<
-std::endl << std::endl; return (m_view * (invRay.start + t * invRay.direction) -
-ray.start).length();
-}*/
-
 geometry::Point2D Sphere::getUV(geometry::Point3D const& x) const {
   geometry::Point3D p = m_invOrientation * ((x - m_center) / m_radius);
   geometry::Coord u = std::atan2(p.x, p.z) / (2 * M_PI) + 0.5;
@@ -157,13 +148,8 @@ geometry::Point2D Torus::getUV(geometry::Point3D const& x) const {
   geometry::Point3D p = m_invView * x;
 
   geometry::Coord u = std::atan2(p.y, p.x) / (2 * M_PI) + 0.5;
-  geometry::Coord v =
-      std::asin(0.9999 * (-p.z / r)) / (M_PI * 2) + 0.5;  // 0.25 .. 0.75
-
-  if (std::isnan(v)) {
-    std::cout << x << " " << p << std::endl;
-    std::cout << p.z << " " << r << std::endl;
-  }
+  geometry::Coord z = 0.9999 * std::max(-1.0, std::min(1.0, -p.z / r));
+  geometry::Coord v = std::asin(z) / (M_PI * 2) + 0.5;  // 0.25 .. 0.75
 
   if (p.x * p.x + p.y * p.y < R * R) {
     if (v > 0.5)

@@ -67,7 +67,7 @@ int example() {
       c::SColor({0.0, 0.0, 0.0}), c::SColor({0.0, 0.0, 0.0}), 0.0, earthText);
 
   std::shared_ptr<m::Material> brick1Mat = std::make_shared<m::GeneralMaterial>(
-      c::SColor({0.8, 0.8, 0.8}), c::SColor({0.1, 0.1, 0.1}), 16.0,
+      c::SColor({1.0, 1.0, 1.0}), c::SColor({0.2, 0.2, 0.2}), 32.0,
       c::SColor({0.0, 0.0, 0.0}), c::SColor({0.0, 0.0, 0.0}), 0.0, brick1Text);
 
   std::shared_ptr<m::Material> concrete1Mat =
@@ -81,7 +81,7 @@ int example() {
       c::SColor({0.0, 0.0, 0.0}), c::SColor({0.0, 0.0, 0.0}), 0.0, ballText);
 
   std::shared_ptr<m::Material> glassMat = std::make_shared<m::GeneralMaterial>(
-      c::SColor({0.0, 0.0, 0.0}), c::SColor({0.1, 0.1, 0.1}), 32.0,
+      c::SColor({0.0, 0.0, 0.0}), c::SColor({0.11, 0.1, 0.1}), 64.0,
       c::SColor({0.0, 0.0, 0.0}), c::SColor({1.0, 1.0, 1.0}), 1.1);
 
   std::shared_ptr<m::Material> mirrorMat = std::make_shared<m::GeneralMaterial>(
@@ -150,7 +150,7 @@ int example() {
 
   color::ImageSize imageSize{2 * 320, 2 * 240};  //{640, 480};
   auto start = std::chrono::steady_clock::now();
-  color::ImageData imageData = render(scene, imageSize, 16);
+  color::ImageData imageData = render(scene, imageSize, 8);
   auto end = std::chrono::steady_clock::now();
 
   std::cout << "Elapsed time: "
@@ -158,7 +158,7 @@ int example() {
                                                                      start)
                    .count()
             << " ms" << std::endl;
-  color::saveImage("render.png", {imageSize, imageData});
+  color::saveImage("example.png", {imageSize, imageData});
   return 0;
 }
 
