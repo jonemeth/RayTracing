@@ -45,8 +45,8 @@ geometry::Point3D const& SphereLight::randomPoint() {
 SphereLight::Positions SphereLight::generatePositions(geometry::Point3D pos,
                                                       geometry::Coord radius) {
   SphereLight::Positions positions;
-  for (geometry::Coord u = 0.0; u < 1.0; u += 0.25) {
-    for (geometry::Coord v = 0.0; v < 1.0; v += 0.25) {
+  for (geometry::Coord u = 0.0; u < 1.0; u += 0.1) {
+    for (geometry::Coord v = 0.0; v < 1.0; v += 0.1) {
       geometry::Coord theta = 2.0 * M_PI * u;
       geometry::Coord phi = std::acos(2.0 * v - 1.0);
 
