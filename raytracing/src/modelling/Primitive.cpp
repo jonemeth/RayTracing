@@ -52,7 +52,7 @@ Sphere::Sphere(geometry::Point3D center, geometry::Coord radius,
       m_invOrientation(m_orientation.inv()) {}
 
 geometry::Point2D Sphere::getUV(geometry::Point3D const& x) const {
-  geometry::Point3D p = m_invOrientation * ((x - m_center) / m_radius);
+  geometry::Point3D p = m_invOrientation * ((x - m_center) / std::abs(m_radius));
   geometry::Coord u = std::atan2(p.x, p.z) / (2 * M_PI) + 0.5;
   geometry::Coord v =
       std::atan2(p.y, std::sqrt(p.x * p.x + p.z * p.z)) / M_PI + 0.5;
