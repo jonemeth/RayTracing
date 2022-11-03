@@ -32,9 +32,9 @@ color::SColor intersectShadow(RenderScene const& renderScene,
   for (auto const& primitive : renderScene.primitives) {
     geometry::Coord t = primitive->intersect(rayToLight);
 
-    if (t > 1e-4 && t < lightDist) attn *= primitive->transparency();
+    if (t > 1e-8 && t < lightDist) attn *= primitive->transparency();
 
-    if (attn.luminance() < 1e-2) return attn;
+    if (attn.luminance() < 1e-8) return attn;
   }
   return attn;
 }
@@ -49,7 +49,7 @@ color::SColor directLightSource(RenderScene const& renderScene,
 
   for (auto const emitter : renderScene.emitters) {
     auto [Le, lightPos, rayToLight] = emitter->emission(x, N);
-    if (Le.luminance() < 1e-2) continue;
+    if (Le.luminance() < 1e-8) continue;
 
     geometry::Vector3D L = lightPos - x;
     geometry::Coord lightDist = L.length();
@@ -79,13 +79,13 @@ color::SColor traceGlobal_recursive(RenderScene const& renderScene,
   modelling::Reflection reflection =
       primitive->reflection(normal, -ray.direction, uv);
 
-  if (reflection.prob < 1e-2) return c;
+  if (reflection.prob < 1e-8) return c;
 
   geometry::Coord cost = reflection.dir * normal;
   if (cost < 0) cost = -cost;
-  if (cost > 1e-2) {
+  if (cost > 1e-8) {
     color::SColor w = reflection.color * cost * reflection.prob;
-    if (w.luminance() > 1e-2) {
+    if (w.luminance() > 1e-8) {
       c += traceGlobal_recursive(renderScene, {x, reflection.dir}, d + 1,
                                  maxDepth) *
            w;
@@ -114,15 +114,15 @@ color::SColor traceGlobal(RenderScene const& renderScene, geometry::Ray ray,
 
     modelling::Reflection reflection =
         primitive->reflection(normal, -ray.direction, uv);
+    if (reflection.prob < 1e-8) break;
 
-    if (reflection.prob < 1e-2) break;
 
     geometry::Coord cost = reflection.dir * normal;
     if (cost < 0) cost = -cost;
-    if (cost < 1e-2) break;
+    if (cost < 1e-8) break;
 
     w *= reflection.color * cost * reflection.prob;
-    if (w.luminance() < 1e-2) break;
+    if (w.luminance() < 1e-8) break;
     ray = geometry::Ray{x, reflection.dir};
   }
 

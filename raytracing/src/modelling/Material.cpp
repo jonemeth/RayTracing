@@ -185,7 +185,7 @@ Reflection IdealRefractor::reflection(geometry::Normal3D const &N,
   geometry::Normal3D L = norm * (cosa / cn - std::sqrt(disc)) - V / cn;
 
   geometry::Coord cost = -(norm * L);
-  color::SColor brdf = cost > 1e-2 ? m_Kt / cost : color::SColor({0, 0, 0});
+  color::SColor brdf = cost > 1e-8 ? m_Kt / cost : color::SColor({0, 0, 0});
 
   return {1.0, L, brdf};
 }
